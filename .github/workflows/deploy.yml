@@ -9,32 +9,31 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout
-      - name: Checkout
-        uses: actions/checkout@v4
+      # Checkout
+      - uses: actions/checkout@v4
 
-      # 2️⃣ Docker login
+      # Docker login
       - name: Login DockerHub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
-      # 3️⃣ Build images
+      # Build
       - name: Build backend
-        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/mean-backend ./backend
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/mean-backend:latest ./backend
 
       - name: Build frontend
-        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/mean-frontend ./frontend
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/mean-frontend:latest ./frontend
 
-      # 4️⃣ Push images
+      # Push
       - name: Push backend
-        run: docker push ${{ secrets.DOCKER_USERNAME }}/mean-backend
+        run: docker push ${{ secrets.DOCKER_USERNAME }}/mean-backend:latest
 
       - name: Push frontend
-        run: docker push ${{ secrets.DOCKER_USERNAME }}/mean-frontend
+        run: docker push ${{ secrets.DOCKER_USERNAME }}/mean-frontend:latest
 
-      # 5️⃣ Deploy EC2
+      # Deploy EC2
       - name: Deploy EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -49,29 +48,23 @@ jobs:
             mkdir -p ~/app
             cd ~/app
 
-            echo "📄 Writing nginx.conf"
+            echo "📄 nginx.conf"
             cat > nginx.conf << 'EOF'
             server {
               listen 80;
 
               location / {
                 proxy_pass http://mean-frontend:80;
-                proxy_http_version 1.1;
-                proxy_set_header Host $host;
-                proxy_set_header X-Real-IP $remote_addr;
               }
 
               location /api/ {
-                proxy_pass http://43.205.203.38:8080/api/tutorials;
-                proxy_http_version 1.1;
-                proxy_set_header Host $host;
-                proxy_set_header X-Real-IP $remote_addr;
+                proxy_pass http://mean-backend:8080/;
               }
             }
             EOF
 
-            echo "📄 Writing docker-compose.yml"
-            cat > docker-compose.yml << 'EOF'
+            echo "📄 docker-compose.yml"
+            cat > docker-compose.yml << EOF
             services:
 
               mongodb:
@@ -82,18 +75,20 @@ jobs:
                   - mean-net
 
               backend:
-                image: DOCKER_USER/mean-backend:latest
+                image: ${{ secrets.DOCKER_USERNAME }}/mean-backend:latest
                 container_name: mean-backend
                 restart: always
                 environment:
-                  - MONGO_URI=mongodb://mongodb:27017/testdb
+                  - MONGO_URL=mongodb://mongodb:27017/testdb
                 depends_on:
                   - mongodb
+                ports:
+                  - "8080:8080"
                 networks:
                   - mean-net
 
               frontend:
-                image: DOCKER_USER/mean-frontend:latest
+                image: ${{ secrets.DOCKER_USERNAME }}/mean-frontend:latest
                 container_name: mean-frontend
                 restart: always
                 depends_on:
@@ -120,14 +115,11 @@ jobs:
                 driver: bridge
             EOF
 
-            echo "🔁 Replace Docker username in compose file"
-            sed -i 's/DOCKER_USER/${{ secrets.DOCKER_USERNAME }}/g' docker-compose.yml
-
-            echo "⬇️ Pull latest images"
+            echo "⬇️ Pull images"
             sudo docker compose pull
 
-            echo "🚀 Start all containers"
+            echo "🚀 Start"
             sudo docker compose up -d
 
-            echo "✅ Running containers:"
+            echo "✅ Containers"
             sudo docker ps
