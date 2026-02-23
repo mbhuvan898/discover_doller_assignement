@@ -1,4 +1,4 @@
-name: MEAN CI CD
+name: Deploy MEAN App
 
 on:
   push:
@@ -6,64 +6,81 @@ on:
 
 jobs:
 
-  build_push:
+  build-and-push:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Login Docker Hub
+      - name: Login DockerHub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_TOKEN }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build backend
-        run: docker build -t bhuvan898/mean-backend:latest ./backend
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/mean-backend ./backend
 
       - name: Build frontend
-        run: docker build -t bhuvan898/mean-frontend:latest ./frontend
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/mean-frontend ./frontend
 
       - name: Push backend
-        run: docker push bhuvan898/mean-backend:latest
+        run: docker push ${{ secrets.DOCKER_USERNAME }}/mean-backend
 
       - name: Push frontend
-        run: docker push bhuvan898/mean-frontend:latest
+        run: docker push ${{ secrets.DOCKER_USERNAME }}/mean-frontend
 
 
   deploy:
-    needs: build_push
+    needs: build-and-push
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy to EC2
+      - name: Deploy EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
+
           script: |
-            sudo docker rm -f mean-frontend || true
-            sudo docker rm -f mean-backend || true
-            sudo docker rm -f mean-mongo || true
+            echo "🔥 CLEAN EC2"
+            sudo docker rm -f $(sudo docker ps -aq) || true
+            sudo docker system prune -af || true
+            sudo docker network rm mean-net || true
 
-            sudo docker pull mongo:6
-            sudo docker pull bhuvan898/mean-backend:latest
-            sudo docker pull bhuvan898/mean-frontend:latest
-
+            echo "🌐 Create network"
             sudo docker network create mean-net || true
 
-            sudo docker run -d --name mean-mongo --network mean-net mongo:6
+            echo "📦 Pull images"
+            sudo docker pull mongo:6
+            sudo docker pull ${{ secrets.DOCKER_USERNAME }}/mean-backend:latest
+            sudo docker pull ${{ secrets.DOCKER_USERNAME }}/mean-frontend:latest
+            sudo docker pull nginx:alpine
 
+            echo "🗄 Run Mongo"
             sudo docker run -d \
-             --name mean-backend \
-             --network mean-net \
-             -e MONGO_URL=mongodb://mean-mongo:27017/testdb \
-             -p 8080:8080 \
-             bhuvan898/mean-backend:latest
+              --name mongodb \
+              --network mean-net \
+              mongo:6
 
+            echo "⚙️ Run Backend"
+            sudo docker run -d \
+              --name mean-backend \
+              --network mean-net \
+              -e MONGO_URL=mongodb://mongodb:27017/testdb \
+              -p 8080:8080 \
+              ${{ secrets.DOCKER_USERNAME }}/mean-backend:latest
+
+            echo "🎨 Run Frontend"
             sudo docker run -d \
               --name mean-frontend \
               --network mean-net \
+              ${{ secrets.DOCKER_USERNAME }}/mean-frontend:latest
+
+            echo "🌍 Run Nginx"
+            sudo docker run -d \
+              --name mean-nginx \
+              --network mean-net \
               -p 80:80 \
-              bhuvan898/mean-frontend:latest
+              nginx:alpine
