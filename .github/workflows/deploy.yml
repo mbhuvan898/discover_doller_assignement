@@ -6,21 +6,9 @@ on:
 
 jobs:
 
-  build:
+  build_push:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - name: Build backend
-        run: docker build -t bhuvan898/mean-backend:latest ./backend
-
-      - name: Build frontend
-        run: docker build -t bhuvan898/mean-frontend:latest ./frontend
-
-
-  push:
-    needs: build
-    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -30,6 +18,12 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
+      - name: Build backend
+        run: docker build -t bhuvan898/mean-backend:latest ./backend
+
+      - name: Build frontend
+        run: docker build -t bhuvan898/mean-frontend:latest ./frontend
+
       - name: Push backend
         run: docker push bhuvan898/mean-backend:latest
 
@@ -38,8 +32,9 @@ jobs:
 
 
   deploy:
-    needs: push
+    needs: build_push
     runs-on: ubuntu-latest
+
     steps:
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
