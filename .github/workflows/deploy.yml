@@ -56,11 +56,11 @@ jobs:
             sudo docker run -d --name mean-mongo --network mean-net mongo:6
 
             sudo docker run -d \
-              --name mean-backend \
-              --network mean-net \
-              -e MONGO_URL=mongodb://mean-mongo:27017 \
-              -p 8080:8080 \
-              bhuvan898/mean-backend:latest
+             --name mean-backend \
+             --network mean-net \
+             -e MONGO_URL=mongodb://mean-mongo:27017/testdb \
+             -p 8080:8080 \
+             bhuvan898/mean-backend:latest
 
             sudo docker run -d \
               --name mean-frontend \
