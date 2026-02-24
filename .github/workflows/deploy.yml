@@ -41,14 +41,14 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            echo "🔥 Clean old containers"
+            echo " Clean old containers"
             sudo docker rm -f $(sudo docker ps -aq) || true
             sudo docker system prune -af || true
 
             mkdir -p ~/app
             cd ~/app
 
-            echo "📄 nginx.conf"
+            echo " nginx.conf"
             cat > nginx.conf << 'EOF'
             server {
               listen 80;
@@ -63,7 +63,7 @@ jobs:
             }
             EOF
 
-            echo "📄 docker-compose.yml"
+            echo " docker-compose.yml"
             cat > docker-compose.yml << EOF
             services:
 
@@ -115,11 +115,11 @@ jobs:
                 driver: bridge
             EOF
 
-            echo "⬇️ Pull images"
+            echo " Pull images"
             sudo docker compose pull
 
-            echo "🚀 Start"
+            echo " Start"
             sudo docker compose up -d
 
-            echo "✅ Containers"
+            echo " Containers"
             sudo docker ps
