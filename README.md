@@ -406,26 +406,6 @@ GitHub Actions Runner
 > Application demonstrating a successful CRUD operation with data persisted in MongoDB.
 
 ---
-
-## ✅ Assignment Checklist
-
-| Requirement | Status |
-|---|---|
-| GitHub repository with complete code | ✅ |
-| Dockerfile — Backend | ✅ |
-| Dockerfile — Frontend | ✅ |
-| Docker images pushed to Docker Hub | ✅ |
-| MongoDB via Docker Compose | ✅ |
-| Docker Compose deployment on EC2 | ✅ |
-| GitHub Actions CI/CD pipeline | ✅ |
-| Auto build + push on git push | ✅ |
-| Auto deploy to EC2 on git push | ✅ |
-| Nginx reverse proxy on port 80 | ✅ |
-| Cloud infrastructure kept live | ✅ |
-| README with screenshots | ✅ |
-
----
-
 ## 🔒 Important Note
 
 As per assignment instructions, the **EC2 instance is kept available** and not terminated. The server may be stopped to save costs but can be restarted at any time for a **live CI/CD demonstration** in the next round.
